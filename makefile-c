@@ -1,0 +1,59 @@
+##############################################################################
+################################ makefile-c ##################################
+##############################################################################
+#                                                                            #
+#   complete makefile of MultiStageStochasticBlock                           #
+#                                                                            #
+#   The makefile defines internally all external libraries (comprised the    #
+#   SMS++ one) required by MultiStageStochasticBlock. Accordingly, all       #
+#   necessary OBJ, H, -I directives, external libraries + -L< libdirs > are  #
+#   added to the corresponding MSSBk* macros.                                #
+#                                                                            #
+#   Input:  $(CC)        = compiler command                                  #
+#           $(SW)        = compiler options                                  #
+#           $(MSSBkSDR)  = the directory where MultiStageStochasticBlock     #
+#                          source is                                         #
+#                                                                            #
+#   Output: $(MSSBkOBJ)  = the final object(s) / library                     #
+#           $(MSSBkLIB)  = external libraries + -L< libdirs >                #
+#           $(MSSBkH)    = the .h files to include for                       #
+#                          MultiStageStochasticBlock                         #
+#           $(MSSBkINC)  = the -I$( MultiStageStochasticBlock directory )    #
+#                                                                            #
+#                              Antonio Frangioni                             #
+#                         Dipartimento di Informatica                        #
+#                             Universita' di Pisa                            #
+#                                                                            #
+##############################################################################
+
+# define & include the necessary modules- - - - - - - - - - - - - - - - - - -
+# if a module is not used in the current configuration, just comment out the
+# corresponding include line
+# each module outputs some macros to be used here:
+# *OBJ is the final object/library
+# *H   is the list of all include files
+# *INC is the -I< include directories >
+
+# define input macros for SMS++ complete makefile, then include it
+SMS++SDR = $(MSSBkSDR)/../SMS++
+include $(SMS++SDR)/lib/makefile-c
+
+# define input macros for TwoStageStochasticBlock makefile, then include it
+TSSBkSDR = $(MSSBkSDR)/../TwoStageStochasticBlock
+include $(TSSBkSDR)/makefile-s
+
+# include the makefile requiring all external modules in input
+include $(MSSBkSDR)/makefile
+
+# macros to be exported - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# append external -I directives to MSSBkINC, MSSBkOBJ and MSSBkH as
+# defined by the makefile, thus the := assignment has to be used (use GNU make)
+MSSBkOBJ := $(MSSBkOBJ) $(TSSBkOBJ) $(SMS++OBJ)
+MSSBkH := $(MSSBkH) $(TSSBkH) $(SMS++H)
+MSSBkINC := $(SMS++INC) $(TSSBkINC) $(MSSBkINC)
+
+# external libraries for MultiStageStochasticBlock
+MSSBkLIB = $(SMS++LIB)
+
+########################### End of makefile-c ################################

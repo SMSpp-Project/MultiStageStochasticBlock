@@ -1,93 +1,146 @@
 # MultiStageStochasticBlock
 
+SMS++ Block for multi-stage stochastic programming problems.
+
+The `MultiStageStochasticBlock` is a `:Block` that represents a multi-stage
+stochastic programming problem as an aggregation of `TwoStageStochasticBlock`,
+in the same way a multi-stage scenario tree is obtained by recursively nesting
+two-stage subtrees. It builds the explicit (extensive) form of the problem by:
+
+- holding one `TwoStageStochasticBlock` per outer-stage scenario as its inner
+  sub-Blocks, each of which represents the two-stage subtree rooted at that
+  scenario and already enforces non-anticipativity over its own here-and-now
+  variables,
+
+- adding an outer layer of non-anticipativity constraints that ties the
+  first-stage (root) here-and-now variables across all the inner
+  `TwoStageStochasticBlock`,
+
+- combining the objectives of the inner `TwoStageStochasticBlock` weighted by
+  the outer-stage scenario probabilities, so that, composed with the inner
+  probabilities, every leaf scenario ends up weighted by its joint
+  probability.
+
+For a three-stage problem the first stage holds the common here-and-now
+decisions, the second stage holds one `TwoStageStochasticBlock` per outer
+scenario, and the third stage holds the recourse decisions in the leaves of
+each inner two-stage subtree. Deeper trees are obtained by letting the inner
+sub-Blocks be themselves `MultiStageStochasticBlock`.
+
+The aggregation reuses the machinery of `TwoStageStochasticBlock`, including
+the recursive `TwoStageStochasticBlockSolution`, so that the whole tree is
+serialized, solved and read back without any of the inner Blocks needing to be
+aware of the multi-stage structure. As with `TwoStageStochasticBlock`, the
+`AbstractPath` to the first-stage variables locates them inside the inner
+Blocks, and scenario data is supplied through `DataMapping` and
+`ScenarioGenerator`.
 
 
 ## Getting started
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+These instructions will let you build MultiStageStochasticBlock on your system.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### Requirements
 
-## Add your files
+- [SMS++ TwoStageStochasticBlock](https://gitlab.com/smspp/twostagestochasticblock),
+  which in turn requires the SMS++ StochasticBlock and the "core SMS++".
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+### Build and install with CMake
 
+Configure and build the library with:
+
+```sh
+mkdir build
+cd build
+cmake ..
+cmake --build .
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/smspp/multistagestochasticblock.git
-git branch -M main
-git push -uf origin main
+
+The library has the same configuration options of
+[SMS++](https://gitlab.com/smspp/smspp-project/-/wikis/Customize-the-configuration).
+
+Optionally, install the library in the system with:
+
+```sh
+cmake --install .
 ```
 
-## Integrate with your tools
+### Usage with CMake
 
-* [Set up project integrations](https://gitlab.com/smspp/multistagestochasticblock/-/settings/integrations)
+After the library is built, you can use it in your CMake project with:
 
-## Collaborate with your team
+```cmake
+find_package(MultiStageStochasticBlock)
+target_link_libraries(<my_target> SMS++::MultiStageStochasticBlock)
+```
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### Build and install with makefiles
 
-## Test and Deploy
+Carefully hand-crafted makefiles have also been developed for those unwilling
+to use CMake. Makefiles build the executable in-source (in the same directory
+tree where the code is) as opposed to out-of-source (in the copy of the
+directory tree constructed in the build/ folder) and therefore it is more
+convenient when having to recompile often, such as when developing/debugging
+a new module, as opposed to the compile-and-forget usage envisioned by CMake.
 
-Use the built-in continuous integration in GitLab.
+Each executable using `MultiStageStochasticBlock` has to include a "main
+makefile" of the module, which typically is either [makefile-c](makefile-c)
+including all necessary libraries comprised the "core SMS++" one, or
+[makefile-s](makefile-s) including all necessary libraries but not the "core
+SMS++" one (for the common case in which this is used together with other
+modules that already include them). The makefiles in turn recursively include
+all the required other makefiles, hence one should only need to edit the "main
+makefile" for compilation type (C++ compiler and its options) and it all
+should be good to go. In case some of the external libraries are not at their
+default location, it should only be necessary to create the
+`../extlib/makefile-paths` out of the `extlib/makefile-default-paths-*` for
+your OS `*` and edit the relevant bits (commenting out all the rest).
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+Check the [SMS++ installation wiki](https://gitlab.com/smspp/smspp-project/-/wikis/Customize-the-configuration#location-of-required-libraries)
+for further details.
 
-***
+## Tests
 
-# Editing this README
+The [test](test) folder contains a tester for `MultiStageStochasticBlock`,
+which loads an instance from a netCDF file, attaches one or two `:Solver`
+through a `BlockSolverConfig` and compares their results.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Getting help
 
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+If you need support, you want to submit bugs or propose a new feature, you can
+[open a new issue](https://gitlab.com/smspp/multistagestochasticblock/-/issues/new).
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of
+conduct, and the process for submitting merge requests to us.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## Authors
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### Current Lead Authors
+
+- **Donato Meoli**  
+  Dipartimento di Informatica  
+  Università di Pisa
+
+### Contributors
+
+- **Antonio Frangioni**  
+  Dipartimento di Informatica  
+  Università di Pisa
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+This code is provided free of charge under the [GNU Lesser General Public
+License version 3.0](https://opensource.org/licenses/lgpl-3.0.html) -
+see the [LICENSE](LICENSE) file for details.
+
+## Disclaimer
+
+The code is currently provided free of charge under an open-source license.
+As such, it is provided "*as is*", without any explicit or implicit warranty
+that it will properly behave or it will suit your needs. The Authors of
+the code cannot be considered liable, either directly or indirectly, for
+any damage or loss that anybody could suffer for having used it. More
+details about the non-warranty attached to this code are available in the
+license description file.

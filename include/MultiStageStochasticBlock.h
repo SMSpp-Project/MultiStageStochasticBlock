@@ -30,6 +30,11 @@
 
 #include "TwoStageStochasticBlock.h"
 
+// MSSB consumes only the abstract MultiStageScenarioGenerator (declared in
+// ScenarioGenerator.h, pulled in via TwoStageStochasticBlock.h), not any
+// concrete generator: the shared scenario tree is read through the generic
+// View interface (root_view() / View::descend()).
+
 /*--------------------------------------------------------------------------*/
 /*----------------------------- NAMESPACE ----------------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -96,6 +101,14 @@ namespace SMSpp_di_unipi_it {
   : TwoStageStochasticBlock( father ) {}
 
 /*--------------------------------------------------------------------------*/
+ /// destructor: releases the shared scenario tree, if any
+ /** The per-inner-Block views into the tree are owned (and deleted) by the
+  * inner TwoStageStochasticBlock themselves; they never dereference the tree
+  * at destruction, so releasing it here is safe regardless of order. */
+
+ virtual ~MultiStageStochasticBlock() { delete f_scenario_tree; }
+
+/*--------------------------------------------------------------------------*/
  /// de-serialize a MultiStageStochasticBlock out of netCDF::NcGroup
  /** The method de-serializes a MultiStageStochasticBlock. Besides the
   * mandatory "type" attribute of any :Block, the group must contain:
@@ -130,31 +143,111 @@ namespace SMSpp_di_unipi_it {
 
   f_number_scenarios = n_sub_blocks;
 
-  // de-serialize the inner TwoStageStochasticBlock, one per outer scenario
   v_Block.reserve( f_number_scenarios );
 
-  for( Index i = 0 ; i < f_number_scenarios ; ++i ) {
-   auto sub_group = group.getGroup( "Block_" + std::to_string( i ) );
-   if( sub_group.isNull() )
-    throw(std::logic_error( "MultiStageStochasticBlock::deserialize: group "
-     "'Block_" + std::to_string( i ) + "' not found." ) );
+  // Two input formats are supported, chosen by the presence of a single
+  // "ScenarioGenerator" subgroup:
+  //
+  // - SHARED-TREE (preferred): the subgroup holds the whole scenario tree (a
+  //   MultiStageDiscreteScenarioSet). The outer-stage scenarios are the
+  //   children of its root, their probabilities are the outer-stage weights,
+  //   and each inner Block is handed a read-only view onto its own outer node
+  //   (before deserialization) from which it draws its inner scenarios; the
+  //   inner Block_l groups carry only the model template (no per-Block
+  //   DiscreteScenarioSet).
+  //
+  // - BAKED (legacy): each inner Block_l is a self-contained
+  //   TwoStageStochasticBlock with its own DiscreteScenarioSet, and the
+  //   outer-stage weights are read from "SubBlockProbabilities".
+  auto sg_group = group.getGroup( "ScenarioGenerator" );
 
-   auto * sub_block = new_Block( sub_group , this );
-   if( ! dynamic_cast< TwoStageStochasticBlock * >( sub_block ) )
-    throw(std::logic_error( "MultiStageStochasticBlock::deserialize: "
-     "sub-Block 'Block_" + std::to_string( i ) +
-     "' is not a TwoStageStochasticBlock." ) );
+  if( ! sg_group.isNull() ) {
+   auto * sg = ScenarioGenerator::new_ScenarioGenerator( sg_group );
+   f_scenario_tree = dynamic_cast< MultiStageScenarioGenerator * >( sg );
+   if( ! f_scenario_tree ) {
+    delete sg;
+    throw(std::logic_error( "MultiStageStochasticBlock::deserialize: the "
+     "'ScenarioGenerator' is not a MultiStageScenarioGenerator." ) );
+   }
 
-   v_Block.push_back( sub_block );
+   // a View pinned at the root: its pool are the outer-stage (first-stage)
+   // realizations; descend() yields, for the outer scenario currently
+   // selected, the View pinned at it, whose pool are that scenario's inner
+   // realizations. The MSSB consumes only this general MultiStageScenario
+   // Generator interface, not the concrete type.
+   auto root = f_scenario_tree->root_view();
+   const Index L = root->get_support_size();
+   if( L != f_number_scenarios )
+    throw(std::invalid_argument(
+     "MultiStageStochasticBlock::deserialize: the scenario tree root has " +
+     std::to_string( L ) + " children but NumberSubBlocks is " +
+     std::to_string( f_number_scenarios ) + "." ) );
+
+   f_sub_block_probabilities.resize( f_number_scenarios );
+
+   // build each inner Block, handing it the View onto its outer node *before*
+   // deserialization so it draws its scenarios from the shared tree
+   for( Index l = 0 ; l < f_number_scenarios ; ++l ) {
+    f_sub_block_probabilities[ l ] =                     // P(s_l)
+     root->get_current_scenario_probability();
+
+    auto sub_group = group.getGroup( "Block_" + std::to_string( l ) );
+    if( sub_group.isNull() )
+     throw(std::logic_error( "MultiStageStochasticBlock::deserialize: group "
+      "'Block_" + std::to_string( l ) + "' not found." ) );
+
+    auto type_att = sub_group.getAtt( "type" );
+    if( type_att.isNull() )
+     throw(std::logic_error( "MultiStageStochasticBlock::deserialize: "
+      "'Block_" + std::to_string( l ) + "' has no 'type' attribute." ) );
+    std::string type;
+    type_att.getValues( type );
+
+    auto * tssb = dynamic_cast< TwoStageStochasticBlock * >(
+                                       new_Block( type , this ) );
+    if( ! tssb )
+     throw(std::logic_error( "MultiStageStochasticBlock::deserialize: "
+      "'Block_" + std::to_string( l ) +
+      "' is not a TwoStageStochasticBlock." ) );
+
+    auto inner_view = root->descend();
+    if( ! inner_view )
+     throw(std::logic_error( "MultiStageStochasticBlock::deserialize: outer "
+      "node " + std::to_string( l ) +
+      " has no inner stage (it is a leaf)." ) );
+    tssb->set_scenario_generator( inner_view.release() );
+    tssb->deserialize( sub_group );
+    v_Block.push_back( tssb );
+
+    if( l + 1 < f_number_scenarios )
+     root->next_scenario();
+   }
   }
+  else {
+   // de-serialize the inner TwoStageStochasticBlock, one per outer scenario
+   for( Index i = 0 ; i < f_number_scenarios ; ++i ) {
+    auto sub_group = group.getGroup( "Block_" + std::to_string( i ) );
+    if( sub_group.isNull() )
+     throw(std::logic_error( "MultiStageStochasticBlock::deserialize: group "
+      "'Block_" + std::to_string( i ) + "' not found." ) );
 
-  // outer-stage scenario probabilities (optional)
-  SMSpp_di_unipi_it::deserialize< double >( group , "SubBlockProbabilities" ,
-                                            f_sub_block_probabilities , true );
-  if( ( ! f_sub_block_probabilities.empty() ) &&
-      ( f_sub_block_probabilities.size() != f_number_scenarios ) )
-   throw(std::invalid_argument( "MultiStageStochasticBlock::deserialize: "
-    "'SubBlockProbabilities' has the wrong size." ) );
+    auto * sub_block = new_Block( sub_group , this );
+    if( ! dynamic_cast< TwoStageStochasticBlock * >( sub_block ) )
+     throw(std::logic_error( "MultiStageStochasticBlock::deserialize: "
+      "sub-Block 'Block_" + std::to_string( i ) +
+      "' is not a TwoStageStochasticBlock." ) );
+
+    v_Block.push_back( sub_block );
+   }
+
+   // outer-stage scenario probabilities (optional)
+   SMSpp_di_unipi_it::deserialize< double >(
+    group , "SubBlockProbabilities" , f_sub_block_probabilities , true );
+   if( ( ! f_sub_block_probabilities.empty() ) &&
+       ( f_sub_block_probabilities.size() != f_number_scenarios ) )
+    throw(std::invalid_argument( "MultiStageStochasticBlock::deserialize: "
+     "'SubBlockProbabilities' has the wrong size." ) );
+  }
 
   // AbstractPath(s) to the first-stage static here-and-now variables; the
   // group is optional, as an MSSB tying no first-stage variables across its
@@ -247,6 +340,9 @@ namespace SMSpp_di_unipi_it {
 
  std::vector< double > f_sub_block_probabilities;
  ///< The outer-stage scenario probabilities (empty == implicit equal weights)
+
+ MultiStageScenarioGenerator * f_scenario_tree = nullptr;
+ ///< Shared scenario tree; non-null only for the shared-tree input format
 
 /*--------------------------------------------------------------------------*/
 

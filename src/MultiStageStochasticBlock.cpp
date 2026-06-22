@@ -97,6 +97,12 @@ void MultiStageStochasticBlock::serialize( netCDF::NcGroup & group ) const
   get_sub_Block( i )->serialize( sub_group );
  }
 
+ // shared scenario tree, if the shared-tree input format is in use
+ if( f_scenario_tree ) {
+  auto sg_group = group.addGroup( "ScenarioGenerator" );
+  f_scenario_tree->serialize( sg_group );
+ }
+
  // outer-stage scenario probabilities (optional)
  if( ! f_sub_block_probabilities.empty() )
   SMSpp_di_unipi_it::serialize< double >( group , f_sub_block_probabilities ,

@@ -31,22 +31,22 @@ endif ()
 
 # ----- MultiStageStochasticBlock_test -------------------------------------- #
 
-add_executable(MultiStageStochasticBlock_test test.cpp)
-target_link_libraries(MultiStageStochasticBlock_test PRIVATE SMS++::MultiStageStochasticBlock)
+add_executable(${modName}_test test.cpp)
+target_link_libraries(${modName}_test PRIVATE SMS++::MultiStageStochasticBlock)
 
 if (WIN32 AND BUILD_SHARED_LIBS AND NOT DEFINED ENV{CONDA_BUILD})
     # On Windows with shared libraries enabled copies all runtime DLL
     # dependencies next to the executable in the build directory
     # (POST_BUILD), using CMake's TARGET_RUNTIME_DLLS generator expression
-    add_custom_command(TARGET MultiStageStochasticBlock_test POST_BUILD
+    add_custom_command(TARGET ${modName}_test POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:MultiStageStochasticBlock_test>
-            $<TARGET_FILE_DIR:MultiStageStochasticBlock_test>
+            $<TARGET_RUNTIME_DLLS:${modName}_test>
+            $<TARGET_FILE_DIR:${modName}_test>
             COMMAND_EXPAND_LISTS
-            COMMENT "Copying runtime DLLs next to MultiStageStochasticBlock_test.exe")
+            COMMENT "Copying runtime DLLs next to ${modName}_test.exe")
 endif ()
 
-add_test(NAME MultiStageStochasticBlock_test
-         COMMAND MultiStageStochasticBlock_test)
+add_test(NAME ${modName}_test
+         COMMAND ${modName}_test)
 
 # --------------------------------------------------------------------------- #

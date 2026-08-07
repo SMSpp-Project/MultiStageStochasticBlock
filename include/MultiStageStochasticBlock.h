@@ -171,10 +171,10 @@ namespace SMSpp_di_unipi_it {
    }
 
    // a View pinned at the root: its pool are the outer-stage (first-stage)
-   // realizations; descend() yields, for the outer scenario currently
-   // selected, the View pinned at it, whose pool are that scenario's inner
-   // realizations. The MSSB consumes only this general MultiStageScenario
-   // Generator interface, not the concrete type.
+   // realizations; a clone of it moved down with descend() is the View
+   // pinned at the outer scenario currently selected, whose pool are that
+   // scenario's inner realizations. The MSSB consumes only this general
+   // MultiStageScenarioGenerator interface, not the concrete type.
    auto root = f_scenario_tree->root_view();
    const Index L = root->get_support_size();
    if( L != f_number_scenarios )
@@ -210,8 +210,10 @@ namespace SMSpp_di_unipi_it {
       "'Block_" + std::to_string( l ) +
       "' is not a TwoStageStochasticBlock." ) );
 
-    auto inner_view = root->descend();
-    if( ! inner_view )
+    // the inner Block gets a View of its own, so that the root one stays
+    // where it is and the L of them are independent of one another
+    auto inner_view = root->clone();
+    if( ! inner_view->descend() )
      throw(std::logic_error( "MultiStageStochasticBlock::deserialize: outer "
       "node " + std::to_string( l ) +
       " has no inner stage (it is a leaf)." ) );

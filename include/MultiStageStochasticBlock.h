@@ -30,6 +30,13 @@
 
 #include "TwoStageStochasticBlock.h"
 
+#include <chrono>    // EXPERIMENTAL: parallel inner-Block build timing
+#include <cstdlib>   // EXPERIMENTAL: std::getenv / std::atoi
+#include <exception> // EXPERIMENTAL: std::exception_ptr (per-thread errors)
+#include <iostream>  // EXPERIMENTAL: timing report on std::cerr
+#include <mutex>     // EXPERIMENTAL: guard the first per-thread exception
+#include <thread>    // EXPERIMENTAL: parallel inner-Block construction
+
 // MSSB consumes only the abstract MultiStageScenarioGenerator (declared in
 // ScenarioGenerator.h, pulled in via TwoStageStochasticBlock.h), not any
 // concrete generator: the shared scenario tree is read through the generic
@@ -226,21 +233,63 @@ namespace SMSpp_di_unipi_it {
    }
   }
   else {
-   // de-serialize the inner TwoStageStochasticBlock, one per outer scenario
-   for( Index i = 0 ; i < f_number_scenarios ; ++i ) {
+   // de-serialize the inner TwoStageStochasticBlock, one per outer scenario.
+   // EXPERIMENTAL: with the env var MSSB_PAR_BUILD=N (N>1) the L independent
+   // inner Blocks are built on N threads (indexed writes into a pre-sized
+   // v_Block, no shared mutable state besides the netCDF group), to probe the
+   // thread-safety of Block-construction + netCDF reads and to measure the
+   // construction speedup. Env unset => the original serial loop, no extra
+   // output (production-unchanged).
+   const char * par_env = std::getenv( "MSSB_PAR_BUILD" );
+   const int n_thr = par_env ? std::atoi( par_env ) : 0;
+   const auto t_build0 = std::chrono::steady_clock::now();
+
+   auto build_one = [ & ]( Index i ) -> Block * {
     auto sub_group = group.getGroup( "Block_" + std::to_string( i ) );
     if( sub_group.isNull() )
      throw(std::logic_error( "MultiStageStochasticBlock::deserialize: group "
       "'Block_" + std::to_string( i ) + "' not found." ) );
-
     auto * sub_block = new_Block( sub_group , this );
     if( ! dynamic_cast< TwoStageStochasticBlock * >( sub_block ) )
      throw(std::logic_error( "MultiStageStochasticBlock::deserialize: "
       "sub-Block 'Block_" + std::to_string( i ) +
       "' is not a TwoStageStochasticBlock." ) );
+    return( sub_block );
+    };
 
-    v_Block.push_back( sub_block );
-   }
+   if( n_thr <= 1 ) {                        // serial (default)
+    for( Index i = 0 ; i < f_number_scenarios ; ++i )
+     v_Block.push_back( build_one( i ) );
+    }
+   else {                                    // EXPERIMENTAL parallel build
+    v_Block.assign( f_number_scenarios , nullptr );
+    std::exception_ptr err;
+    std::mutex err_mx;
+    std::vector< std::thread > pool;
+    for( int t = 0 ; t < n_thr ; ++t )
+     pool.emplace_back( [ & , t ]() {
+      try {
+       for( Index i = static_cast< Index >( t ) ; i < f_number_scenarios ;
+            i += static_cast< Index >( n_thr ) )
+        v_Block[ i ] = build_one( i );
+       }
+      catch( ... ) {
+       std::lock_guard< std::mutex > lk( err_mx );
+       if( ! err ) err = std::current_exception();
+       }
+      } );
+    for( auto & th : pool )
+     th.join();
+    if( err )
+     std::rethrow_exception( err );
+    }
+
+   if( par_env )
+    std::cerr << "[MSSB baked build] L=" << f_number_scenarios << " threads="
+              << ( n_thr > 1 ? n_thr : 1 ) << " time="
+              << std::chrono::duration< double >(
+                   std::chrono::steady_clock::now() - t_build0 ).count()
+              << "s" << std::endl;
 
    // outer-stage scenario probabilities (optional)
    SMSpp_di_unipi_it::deserialize< double >(

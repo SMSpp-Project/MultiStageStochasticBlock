@@ -359,6 +359,49 @@ namespace SMSpp_di_unipi_it {
 
 /*--------------------------------------------------------------------------*/
 
+ /// returns the number of leaves of the whole tree
+ /** Each outer-stage scenario of a MultiStageStochasticBlock carries a whole
+  * subtree, so the realizations are the leaves of all the subtrees together
+  * and not the sub-Block, of which get_first_stage_block() returns one
+  * representative each. The count is recursive, hence right for an
+  * arbitrarily deep nesting. */
+
+ Index get_number_leaves( void ) const override {
+  Index n = 0;
+  for( Index k = 0 ; k < get_number_scenarios() ; ++k ) {
+   auto inner = get_sub_Block( k );
+   if( auto tssb = dynamic_cast< TwoStageStochasticBlock * >( inner ) )
+    n += tssb->get_number_leaves();
+   else
+    ++n;
+   }
+  return( n );
+  }
+
+/*--------------------------------------------------------------------------*/
+
+ /// returns the Block of the \p leaf -th realization of the whole tree
+ /** Flattens the subtrees into a single index, the leaves of subtree 0 first,
+  * then those of subtree 1 and so on, and descends through the virtual itself
+  * so that the order is well defined at any depth. Returns nullptr if \p leaf
+  * is out of range. */
+
+ Block * get_leaf_block( Index leaf ) const override {
+  for( Index k = 0 ; k < get_number_scenarios() ; ++k ) {
+   auto inner = get_sub_Block( k );
+   auto tssb = dynamic_cast< TwoStageStochasticBlock * >( inner );
+   const Index n = tssb ? tssb->get_number_leaves() : 1;
+   if( leaf < n )
+    return( tssb ? tssb->get_leaf_block( leaf )
+                 : ( inner->get_nested_Blocks().empty()
+                     ? inner : inner->get_nested_Blocks().front() ) );
+   leaf -= n;
+   }
+  return( nullptr );
+  }
+
+/*--------------------------------------------------------------------------*/
+
  /// returns the outer-stage scenario probabilities (empty == equal weights)
 
  const std::vector< double > & get_sub_block_probabilities( void ) const {

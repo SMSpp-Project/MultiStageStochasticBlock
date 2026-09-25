@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+
 ### Changed
 
 - the makefile asks for `-O3 -DNDEBUG` and nothing else, the macro of the
@@ -28,8 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the check of the direct construction and of the registration in the factory
   was built by nobody, and it now carries the label of the module, which is
   what `ctest -L <module>` selects
-
-### Fixed
 
 ## [0.1.0] - 2026-09-12
 

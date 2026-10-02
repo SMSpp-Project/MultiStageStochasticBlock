@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `get_leaf_probability( leaf )` gives the joint probability of a leaf of the
+  whole tree, in the order of `get_leaf_block()`: the probability of its
+  outer-stage scenario times that of the leaf in its subtree
+
 
 ### Changed
 

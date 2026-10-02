@@ -402,6 +402,29 @@ namespace SMSpp_di_unipi_it {
 
 /*--------------------------------------------------------------------------*/
 
+ /// returns the probability of the \p leaf -th realization of the whole tree
+ /** The joint probability of the \p leaf -th leaf, in the order of
+  * get_leaf_block(): that of its outer-stage scenario (1 if there are no
+  * SubBlockProbabilities) times its probability in the subtree, which is
+  * what generate_objective() weighs its Objective by. Returns 0 if \p leaf
+  * is out of range. */
+
+ double get_leaf_probability( Index leaf ) const override {
+  for( Index k = 0 ; k < get_number_scenarios() ; ++k ) {
+   auto tssb = dynamic_cast< TwoStageStochasticBlock * >( get_sub_Block( k ) );
+   const Index n = tssb ? tssb->get_number_leaves() : 1;
+   if( leaf < n ) {
+    const double w = f_sub_block_probabilities.empty()
+                     ? 1.0 : f_sub_block_probabilities[ k ];
+    return( w * ( tssb ? tssb->get_leaf_probability( leaf ) : 1.0 ) );
+    }
+   leaf -= n;
+   }
+  return( 0 );
+  }
+
+/*--------------------------------------------------------------------------*/
+
  /// returns the outer-stage scenario probabilities (empty == equal weights)
 
  const std::vector< double > & get_sub_block_probabilities( void ) const {

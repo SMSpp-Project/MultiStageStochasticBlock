@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whole tree, in the order of `get_leaf_block()`: the probability of its
   outer-stage scenario times that of the leaf in its subtree
 
-
 ### Changed
 
 - the makefile asks for `-O3 -DNDEBUG` and nothing else, the macro of the

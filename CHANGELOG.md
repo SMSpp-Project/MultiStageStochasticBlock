@@ -7,11 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
 ### Added
+
+- `get_leaf_probability( leaf )` gives the joint probability of a leaf of the
+  whole tree, in the order of `get_leaf_block()`: the probability of its
+  outer-stage scenario times that of the leaf in its subtree
 
 ### Changed
 
+- the makefile asks for `-O3 -DNDEBUG` and nothing else, the macro of the
+  patch for `boost::any` on macOS having no reason to be there since there is
+  no `boost::any` left in the core
+
+- whoever links the module keeps it: the classes of a module register
+  themselves in the factory from a static initialiser, and a linker that
+  drops what looks unused takes the registration away with it, so the target
+  now tells whoever links it to keep the symbol that forces the module in,
+  and on ELF, where naming the symbol is not enough, the library as a whole
+
 ### Fixed
+
+- on macOS a program linking the module lost the classes the module
+  registers in the factories when the linker dropped the library, as it
+  does under `-dead_strip_dylibs`, which conda sets: the target now asks the
+  linker for the symbol that forces the module in (`-u`), which ld64,
+  unlike the ELF linker, counts as a use of the library
+
+- the test of this module enters the build and the pipeline runs it: its
+  directory was never added, `BUILD_TESTING` being consumed by a comment, so
+  the check of the direct construction and of the registration in the factory
+  was built by nobody, and it now carries the label of the module, which is
+  what `ctest -L <module>` selects
 
 ## [0.1.0] - 2026-09-12
 
@@ -35,5 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   RPATH relative to itself, so that an installed tree keeps working wherever
   it is moved
 
-[Unreleased]: https://gitlab.com/smspp/multistagestochasticblock/-/compare/0.1.0...develop
+[Unreleased]: https://gitlab.com/smspp/multistagestochasticblock/-/compare/0.2.0...develop
+[0.2.0]: https://gitlab.com/smspp/multistagestochasticblock/-/compare/0.1.0...0.2.0
 [0.1.0]: https://gitlab.com/smspp/multistagestochasticblock/-/tags/0.1.0

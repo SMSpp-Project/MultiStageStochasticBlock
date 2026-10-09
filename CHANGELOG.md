@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-09
+
 ### Added
 
 - `get_leaf_probability( leaf )` gives the joint probability of a leaf of the
@@ -61,5 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   RPATH relative to itself, so that an installed tree keeps working wherever
   it is moved
 
-[Unreleased]: https://gitlab.com/smspp/multistagestochasticblock/-/compare/0.1.0...develop
+[Unreleased]: https://gitlab.com/smspp/multistagestochasticblock/-/compare/0.2.0...develop
+[0.2.0]: https://gitlab.com/smspp/multistagestochasticblock/-/compare/0.1.0...0.2.0
 [0.1.0]: https://gitlab.com/smspp/multistagestochasticblock/-/tags/0.1.0

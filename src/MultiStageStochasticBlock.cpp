@@ -66,7 +66,7 @@ void MultiStageStochasticBlock::generate_objective( Configuration * objc )
 } // end( MultiStageStochasticBlock::generate_objective )
 
 /*--------------------------------------------------------------------------*/
-/*------- METHODS FOR PRINTING & SAVING THE MultiStageStochasticBlock -------*/
+/*------- METHODS FOR PRINTING & SAVING THE MultiStageStochasticBlock ------*/
 /*--------------------------------------------------------------------------*/
 
 void MultiStageStochasticBlock::print( std::ostream & output , char vlvl ) const

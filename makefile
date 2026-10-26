@@ -41,7 +41,7 @@ MSSBkH   = $(MSSBkSDR)/include/MultiStageStochasticBlock.h
 # [see makefile-mod of SMS++]
 
 $(eval $(call SMSppMODrule,MSSBk,$(MSSBkSDR),MultiStageStochasticBlock,\
-	smspp.multistagestochasticblock,$(TSSBkMOD)))
+	smspp.multistagestochasticblock,TSSBk))
 
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

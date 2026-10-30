@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- the outer-stage probabilities are the weights of the Objective of the
+  inner `TwoStageStochasticBlock` [see `Block::set_objective_weight()`],
+  given in `deserialize()`, rather than being multiplied into the
+  coefficients, so that each leaf counts with its joint probability
+
 - the pipeline builds the module also with its makefiles, after CMake, and
   runs on a change of the makefiles too [see `ci/makefile` of the umbrella]
 

@@ -44,21 +44,11 @@ void MultiStageStochasticBlock::generate_objective( Configuration * objc )
  if( objective_generated() ) // objective has already been generated
   return;                   // nothing to do
 
- // First, generate the objectives of all inner TwoStageStochasticBlock; each
- // of them scales its own leaves by the inner scenario probabilities.
+ // the objectives of all inner TwoStageStochasticBlock, summed: the outer and
+ // inner probabilities are the weights of their Objective [see deserialize()]
  for( auto * block : v_Block )
   if( block ) block->generate_objective( objc );
 
- // Scale each inner Block's objective by its outer-stage probability, so that
- // every leaf ends up weighted by its joint probability. If no probabilities
- // are available, the inner objectives are summed unscaled. The recursive
- // scaler is inherited from TwoStageStochasticBlock.
- if( ! f_sub_block_probabilities.empty() )
-  for( Index l = 0 ; l < v_Block.size() ; ++l )
-   if( v_Block[ l ] )
-    scale_objective_recursive( v_Block[ l ] , f_sub_block_probabilities[ l ] );
-
- // Now call base class to aggregate the (already scaled) objectives
  Block::generate_objective( objc );
 
  set_objective_generated();

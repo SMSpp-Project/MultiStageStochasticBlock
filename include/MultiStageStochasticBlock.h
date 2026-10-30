@@ -63,7 +63,7 @@ namespace SMSpp_di_unipi_it {
  * The class derives from TwoStageStochasticBlock and reuses all its machinery:
  * its inner sub-Blocks (v_Block) are one TwoStageStochasticBlock per
  * outer-stage scenario, and the inherited code that builds the
- * non-anticipativity constraints, scales the objectives and reads/writes the
+ * non-anticipativity constraints, weighs the objectives and reads/writes the
  * Solution works unchanged once two small things are specialized:
  *
  * - the here-and-now AbstractPath are resolved one level deeper, against the
@@ -71,8 +71,10 @@ namespace SMSpp_di_unipi_it {
  *   where the first-stage variables physically live (overriding
  *   get_first_stage_block());
  *
- * - the per-sub-Block objective weights are the outer-stage scenario
- *   probabilities (overriding generate_objective()).
+ * - the weights of the Objective of the sub-Block [see
+ *   Block::set_objective_weight()] are the outer-stage scenario
+ *   probabilities, which times those of the leaves of each inner
+ *   TwoStageStochasticBlock are the joint probabilities.
  *
  * Each inner TwoStageStochasticBlock already enforces non-anticipativity over
  * its own here-and-now variables; the MultiStageStochasticBlock adds an outer
@@ -127,8 +129,9 @@ namespace SMSpp_di_unipi_it {
   *   factory format;
   *
   * - SubBlockProbabilities (optional): a netCDF::NcDouble variable indexed
-  *   over NumberSubBlocks with the outer-stage scenario probabilities; if
-  *   absent the inner objectives are summed unscaled;
+  *   over NumberSubBlocks with the outer-stage scenario probabilities, which
+  *   are the weights of the Objective of the sub-Block; if absent the inner
+  *   objectives are summed as they are;
   *
   * - StaticAbstractPath (optional): the AbstractPath to the first-stage
   *   (here-and-now) static variables, given relative to the representative
@@ -314,6 +317,15 @@ namespace SMSpp_di_unipi_it {
    throw(std::invalid_argument( "MultiStageStochasticBlock::deserialize: "
     "cannot handle dynamic here-and-now variables right now." ) );
 
+  // the outer-stage probabilities are the weights of the Objective of the
+  // inner Block [see Block::set_objective_weight()], times the ones they
+  // have read; nobody listens to them yet, hence the weight can be set
+  if( ! f_sub_block_probabilities.empty() )
+   for( Index l = 0 ; l < v_Block.size() ; ++l )
+    if( v_Block[ l ] && ( f_sub_block_probabilities[ l ] != 1 ) )
+     v_Block[ l ]->set_objective_weight( v_Block[ l ]->get_objective_weight()
+                                         * f_sub_block_probabilities[ l ] );
+
   Block::deserialize( group );
  }
 
@@ -406,8 +418,8 @@ namespace SMSpp_di_unipi_it {
  /** The joint probability of the \p leaf -th leaf, in the order of
   * get_leaf_block(): that of its outer-stage scenario (1 if there are no
   * SubBlockProbabilities) times its probability in the subtree, which is
-  * what generate_objective() weighs its Objective by. Returns 0 if \p leaf
-  * is out of range. */
+  * the product of the weights of the Objective along its path [see
+  * deserialize()]. Returns 0 if \p leaf is out of range. */
 
  double get_leaf_probability( Index leaf ) const override {
   for( Index k = 0 ; k < get_number_scenarios() ; ++k ) {
@@ -438,12 +450,10 @@ namespace SMSpp_di_unipi_it {
   *  @{ */
 
  /// generate the objective of the MultiStageStochasticBlock
- /** Generates the objectives of all inner TwoStageStochasticBlock (which scale
-  * their own leaves by the inner scenario probabilities), then scales each
-  * inner Block's objective by its outer-stage scenario probability, so that
-  * every leaf ends up weighted by its joint probability, and finally lets the
-  * base class aggregate them. If no outer-stage probabilities are available,
-  * the inner objectives are summed unscaled. */
+ /** Generates the objectives of all inner TwoStageStochasticBlock and lets
+  * the base class aggregate them: the probabilities are the weights of the
+  * Objective of the inner Block and of their leaves [see deserialize()], so
+  * that every leaf counts with its joint probability. */
 
  void generate_objective( Configuration * objc = nullptr ) override;
 

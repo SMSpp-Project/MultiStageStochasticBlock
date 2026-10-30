@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `MultiStageStochasticBlock::serialize()` writes each inner `Block` with
+  the weight of the Objective it has read, its outer-stage probability being
+  written apart in `SubBlockProbabilities`: it wrote the weight already
+  multiplied by the probability, which a `Block` written and read back had
+  twice; `MSSB_test` checks the weights after a round trip on every instance
+
 - the makefiles of the tests and of the tools build also with g++: they
   take the option that stops at the first error and the one of the
   debugging information, which clang++ and g++ spell differently

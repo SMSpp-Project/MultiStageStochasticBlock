@@ -82,9 +82,22 @@ void MultiStageStochasticBlock::serialize( netCDF::NcGroup & group ) const
  group.addDim( "NumberSubBlocks" , get_number_scenarios() );
 
  // inner TwoStageStochasticBlock, one per outer scenario
+ // the weight of the Objective of each inner Block is the one it has read
+ // times its outer-stage probability [see deserialize()], which is written
+ // apart: the inner Block is written with the weight it has read
  for( Index i = 0 ; i < get_number_scenarios() ; ++i ) {
   auto sub_group = group.addGroup( "Block_" + std::to_string( i ) );
-  get_sub_Block( i )->serialize( sub_group );
+  auto sub = get_sub_Block( i );
+  sub->serialize( sub_group );
+  if( ( i < f_sub_block_probabilities.size() ) &&
+      ( f_sub_block_probabilities[ i ] != 1 ) ) {
+   const double w = sub->get_objective_weight() /
+                    f_sub_block_probabilities[ i ];
+   if( w == 1 )
+    nc_del_att( sub_group.getId() , NC_GLOBAL , "ObjectiveWeight" );
+   else
+    sub_group.putAtt( "ObjectiveWeight" , netCDF::NcDouble() , w );
+   }
  }
 
  // shared scenario tree, if the shared-tree input format is in use

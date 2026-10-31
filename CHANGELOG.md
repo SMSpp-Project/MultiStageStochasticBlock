@@ -40,6 +40,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- with the compilers of MinGW (MSYS2) the target asks whoever links it
+  for the symbol that forces the module in, as with MSVC and on macOS:
+  the linker imports a DLL only for the symbols asked for, so that a
+  program that used none had the module left out and its classes
+  missing from the factory
+
 - `MultiStageStochasticBlock::serialize()` writes each inner `Block` with
   the weight of the Objective it has read, its outer-stage probability being
   written apart in `SubBlockProbabilities`: it wrote the weight already

@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- the README leaves the channels that distribute SMS++ to the
+  installation guide of the wiki (Installing-SMS++), keeping the names
+  of the packages of the module
+
 - the outer-stage probabilities are the weights of the Objective of the
   inner `TwoStageStochasticBlock` [see `Block::set_objective_weight()`],
   given in `deserialize()`, rather than being multiplied into the

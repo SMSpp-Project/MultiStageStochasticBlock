@@ -44,21 +44,11 @@ void MultiStageStochasticBlock::generate_objective( Configuration * objc )
  if( objective_generated() ) // objective has already been generated
   return;                   // nothing to do
 
- // First, generate the objectives of all inner TwoStageStochasticBlock; each
- // of them scales its own leaves by the inner scenario probabilities.
+ // the objectives of all inner TwoStageStochasticBlock, summed: the outer and
+ // inner probabilities are the weights of their Objective [see deserialize()]
  for( auto * block : v_Block )
   if( block ) block->generate_objective( objc );
 
- // Scale each inner Block's objective by its outer-stage probability, so that
- // every leaf ends up weighted by its joint probability. If no probabilities
- // are available, the inner objectives are summed unscaled. The recursive
- // scaler is inherited from TwoStageStochasticBlock.
- if( ! f_sub_block_probabilities.empty() )
-  for( Index l = 0 ; l < v_Block.size() ; ++l )
-   if( v_Block[ l ] )
-    scale_objective_recursive( v_Block[ l ] , f_sub_block_probabilities[ l ] );
-
- // Now call base class to aggregate the (already scaled) objectives
  Block::generate_objective( objc );
 
  set_objective_generated();
@@ -66,7 +56,7 @@ void MultiStageStochasticBlock::generate_objective( Configuration * objc )
 } // end( MultiStageStochasticBlock::generate_objective )
 
 /*--------------------------------------------------------------------------*/
-/*------- METHODS FOR PRINTING & SAVING THE MultiStageStochasticBlock -------*/
+/*------- METHODS FOR PRINTING & SAVING THE MultiStageStochasticBlock ------*/
 /*--------------------------------------------------------------------------*/
 
 void MultiStageStochasticBlock::print( std::ostream & output , char vlvl ) const
@@ -92,9 +82,22 @@ void MultiStageStochasticBlock::serialize( netCDF::NcGroup & group ) const
  group.addDim( "NumberSubBlocks" , get_number_scenarios() );
 
  // inner TwoStageStochasticBlock, one per outer scenario
+ // the weight of the Objective of each inner Block is the one it has read
+ // times its outer-stage probability [see deserialize()], which is written
+ // apart: the inner Block is written with the weight it has read
  for( Index i = 0 ; i < get_number_scenarios() ; ++i ) {
   auto sub_group = group.addGroup( "Block_" + std::to_string( i ) );
-  get_sub_Block( i )->serialize( sub_group );
+  auto sub = get_sub_Block( i );
+  sub->serialize( sub_group );
+  if( ( i < f_sub_block_probabilities.size() ) &&
+      ( f_sub_block_probabilities[ i ] != 1 ) ) {
+   const double w = sub->get_objective_weight() /
+                    f_sub_block_probabilities[ i ];
+   if( w == 1 )
+    nc_del_att( sub_group.getId() , NC_GLOBAL , "ObjectiveWeight" );
+   else
+    sub_group.putAtt( "ObjectiveWeight" , netCDF::NcDouble() , w );
+   }
  }
 
  // shared scenario tree, if the shared-tree input format is in use

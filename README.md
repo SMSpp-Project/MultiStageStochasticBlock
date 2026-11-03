@@ -1,5 +1,11 @@
 # MultiStageStochasticBlock
 
+[![Pipeline](https://gitlab.com/smspp/multistagestochasticblock/badges/develop/pipeline.svg)](https://gitlab.com/smspp/multistagestochasticblock/-/pipelines?ref=develop)
+[![Release](https://gitlab.com/smspp/multistagestochasticblock/-/badges/release.svg)](https://gitlab.com/smspp/multistagestochasticblock/-/releases)
+[![Documentation](https://img.shields.io/badge/docs-Doxygen-blue)](https://smspp.gitlab.io/smspp-project/)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+
 SMS++ Block for multi-stage stochastic programming problems.
 
 The `MultiStageStochasticBlock` is a `:Block` that represents a multi-stage
@@ -40,22 +46,11 @@ Blocks, and scenario data is supplied through `DataMapping` and
 
 These instructions will let you build MultiStageStochasticBlock on your system.
 
-The module also comes ready-made, in any of
-
-```sh
-sudo add-apt-repository ppa:smspp-project/smspp   # Ubuntu
-sudo apt install libsmspp-mssb-dev                # and smspp-mssb for the tool
-
-conda install -c conda-forge smspp-project        # Linux, macOS, Windows
-
-brew tap SMSpp-Project/smspp                      # macOS, Linux
-brew install smspp
-
-vcpkg install "smspp[core,mssb]"                  # from the sources
-```
-
-where apt and the port give the module alone, while conda and the tap carry
-the whole framework. What follows is about building it yourself.
+The module also comes ready-made: on Ubuntu as `libsmspp-mssb-dev` (and
+`smspp-mssb` for the tool), in vcpkg as `smspp[core,mssb]`, and in the other
+channels that the [installation
+guide](https://gitlab.com/smspp/smspp-project/-/wikis/Installing-SMS++) of
+SMS++ lists. What follows is about building it yourself.
 
 ### Requirements
 

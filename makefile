@@ -37,6 +37,12 @@ MSSBkINC = -I$(MSSBkSDR)/include
 
 MSSBkH   = $(MSSBkSDR)/include/MultiStageStochasticBlock.h
 
+# the C++20 module smspp.multistagestochasticblock - - - - - - - - - - - - -
+# [see makefile-mod of SMS++]
+
+$(eval $(call SMSppMODrule,MSSBk,$(MSSBkSDR),MultiStageStochasticBlock,\
+	smspp.multistagestochasticblock,TSSBk))
+
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 clean::

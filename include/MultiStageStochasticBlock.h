@@ -353,7 +353,8 @@ namespace SMSpp_di_unipi_it {
   * MultiStageStochasticBlock whose sub-Blocks are themselves
   * MultiStageStochasticBlock): if the inner Block is a
   * (Two/Multi)StageStochasticBlock, its own get_first_stage_block(0) is
-  * followed; otherwise the inner Block (or its first sub-Block) is returned. */
+  * followed; otherwise the inner Block (or its first sub-Block) is
+  * returned. */
 
  Block * get_first_stage_block( Index scenario ) const override {
   auto inner = get_sub_Block( scenario );
@@ -365,9 +366,12 @@ namespace SMSpp_di_unipi_it {
 
 /*--------------------------------------------------------------------------*/
 
- /// returns the number of inner TwoStageStochasticBlock (outer-stage scenarios)
+ /// returns the number of inner TwoStageStochasticBlock (outer-stage
+ /// scenarios)
 
- Index get_number_sub_blocks( void ) const { return( get_number_scenarios() ); }
+ Index get_number_sub_blocks( void ) const {
+  return( get_number_scenarios() );
+  }
 
 /*--------------------------------------------------------------------------*/
 

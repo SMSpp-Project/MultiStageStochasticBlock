@@ -56,4 +56,8 @@ MSSBkINC := $(SMS++INC) $(TSSBkINC) $(MSSBkINC)
 # external libraries for MultiStageStochasticBlock
 MSSBkLIB = $(SMS++LIB)
 
+# the objects as the shared libraries of the module and of those whose
+# objects it takes [see SMS++/lib/makefile-shared]
+$(eval $(call SMSppSOlib,MSSBk))
+
 ########################### End of makefile-c ################################
